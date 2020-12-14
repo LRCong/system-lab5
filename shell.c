@@ -8,33 +8,26 @@ int getcmd(char *buf, int nbuf)
     printf("$ ");
     memset(buf, 0, nbuf);
     fgets(buf, nbuf, stdin);
-    if (buf[0] == 0) // EOF
+    if (buf[0] == 0)
         return -1;
     return 0;
 }
 
 int parse_cmd(char *buf)
 {
-    char path_buf[20];
+    char path_buf[40];
     char command_buf[20];
-    int mod = 0;
+    int mod = 4;
     int flag = 0;
-    for (int i = 0; i < strlen(buf); i++)
+    int i;
+    for (i = 0; i <= strlen(buf); i++)
     {
-        if (buf[i] == ' ')
+        if (buf[i] == ' ' || buf[i] == '\n')
         {
             strncpy(command_buf, buf, i);
-            strcpy(path_buf, buf + i + 1);
             command_buf[i] = '\0';
-            path_buf[strlen(buf) - i - 2] = '\0';
-            flag = 1;
             break;
         }
-    }
-    if (flag == 0)
-    {
-        strcpy(command_buf, buf);
-        command_buf[strlen(buf) - 1] = '\0';
     }
     if (strcmp("ls", command_buf) == 0)
         mod = 2;
@@ -47,17 +40,33 @@ int parse_cmd(char *buf)
     switch (mod)
     {
     case 0:
-        printf("%s", "'step1'");
+        strcpy(path_buf, buf + i + 1);
+        path_buf[strlen(path_buf) - 1] = '\0';
         create_dir(path_buf);
         break;
     case 1:
+        strcpy(path_buf, buf + i + 1);
+        path_buf[strlen(path_buf) - 1] = '\0';
+        create_file(path_buf);
         break;
     case 2:
+        strcpy(path_buf, buf + i + 1);
+        path_buf[strlen(path_buf) - 1] = '\0';
+        ls(path_buf);
         break;
     case 3:
+        strcpy(path_buf, buf + i + 1);
+        path_buf[strlen(path_buf) - 1] = '\0';
+        while (path_buf[i] != ' ')
+            i++;
+        path_buf[i] = '\0';
+        copy_file(path_buf, path_buf + i + 1);
         break;
+    default:
+        shutdown();
+        return 0;
     }
-    return 0;
+    return 1;
 }
 
 int main(void)
@@ -65,10 +74,11 @@ int main(void)
     static char buf[100];
 
     fs_init();
-    // Read and run input commands.
+
     while (getcmd(buf, sizeof(buf)) >= 0)
     {
-        parse_cmd(buf);
+        if (!parse_cmd(buf))
+            return 0;
     }
-    return 0;
+    return -1;
 }
