@@ -72,6 +72,35 @@ void write_inode()
     }
 }
 
+// 读入spBlock
+void read_sp()
+{
+    char buf[1024];
+    char *p;
+    read_block(0, buf);
+    p = (char *)spBlock;
+    for (int i = 0; i < sizeof(sp_block); i++)
+    {
+        *p = buf[i];
+        p++;
+    }
+}
+
+// 写入spBlock
+void write_sp()
+{
+    char buf[1024];
+    char *p;
+    // 读取超级块
+    p = (char *)spBlock;
+    for (int i = 0; i < sizeof(sp_block); i++)
+    {
+        buf[i] = *p;
+        p++;
+    }
+    write_block(0, buf);
+}
+
 // 找到空闲inode
 int find_free_inode()
 {
@@ -90,7 +119,7 @@ int find_free_inode()
             }
         }
     }
-    write_block(0, (char *)spBlock);
+    write_sp();
     return num;
 }
 
@@ -112,7 +141,7 @@ int find_free_block()
             }
         }
     }
-    write_block(0, (char *)spBlock);
+    write_sp();
     return num;
 }
 
@@ -121,17 +150,10 @@ void fs_init()
 {
     // int i;
     char *p;
-    char buf[100];
+    char buf[1024];
     spBlock = (sp_block *)malloc(sizeof(sp_block));
     open_disk();
-    read_block(0, buf);
-    // 读取超级块
-    p = (char *)spBlock;
-    for (int i = 0; i < sizeof(sp_block) / 8; i++)
-    {
-        *p = buf[i];
-        p++;
-    }
+    read_sp();
     // 发现不是本文件系统，则进行初始化
     if (spBlock->magic_num != 0xdec0de)
     {
@@ -156,7 +178,7 @@ void fs_init()
 
         write_block(33, (char *)block_buffer);
         write_inode();
-        write_block(0, (char *)spBlock);
+        write_sp();
     }
     return;
 }
@@ -294,62 +316,66 @@ int create_file(char *path)
 // 创建文件夹
 int create_dir(char *path)
 {
+    printf("%s", path);
     char path_buf[20], name_buf[20];
     int father_inode_id = 1;
     int len = strlen(path);
     int inode_id = find_free_inode();
-    int flag = 0;
-    inode_table[inode_id].file_type = 0;
-    memset(name_buf, 0, sizeof(name_buf));
-    memset(path_buf, 0, sizeof(path_buf));
-    for (int i = len - 1; i >= 0; i--)
-    {
-        if (i == 0 || path[i] == '/')
-        {
-            strncpy(name_buf, path + i + 1, len - i - 1);
-            strncpy(path_buf, path, i);
-            break;
-        }
-    }
-    if (strlen(path_buf) > 1)
-    {
-        father_inode_id = find_inode(path_buf);
-    }
-    else
-    {
-        father_inode_id = 1;
-    }
-    if (inode_table[father_inode_id].size > 0)
-    {
-        memset(block_buffer, 0, sizeof(block_buffer));
-        write_block(inode_table[father_inode_id].block_point[inode_table[father_inode_id].size - 1], (char *)block_buffer);
-        for (int j = 0; j < 8; j++)
-        {
-            if (block_buffer[j].valid == 0)
-            {
-                block_buffer[j].valid = 1;
-                block_buffer[j].inode_id = inode_id;
-                block_buffer[j].type = 1;
-                strcpy(block_buffer[j].name, name_buf);
-                write_block(inode_table[father_inode_id].block_point[inode_table[father_inode_id].size - 1], (char *)block_buffer);
-                flag = 1;
-                break;
-            }
-        }
-    }
-    if (flag == 0)
-    {
-        inode_table[father_inode_id].size++;
-        inode_table[father_inode_id].block_point[inode_table[father_inode_id].size - 1] = find_free_block();
-        write_inode();
-        memset(block_buffer, 0, sizeof(block_buffer));
-        block_buffer[0].valid = 1;
-        block_buffer[0].inode_id = inode_id;
-        block_buffer[0].type = 1;
-        strcpy(block_buffer[0].name, name_buf);
-        write_block(inode_table[father_inode_id].block_point[inode_table[father_inode_id].size - 1], (char *)block_buffer);
-    }
-    return inode_id;
+    printf("%d", inode_id);
+    // int flag = 0;
+    // inode_table[inode_id].file_type = 0;
+    // memset(name_buf, 0, sizeof(name_buf));
+    // memset(path_buf, 0, sizeof(path_buf));
+    // for (int i = len - 1; i >= 0; i--)
+    // {
+    //     if (i == 0 || path[i] == '/')
+    //     {
+    //         strncpy(name_buf, path + i + 1, len - i - 1);
+    //         strncpy(path_buf, path, i);
+    //         break;
+    //     }
+    // }
+    // printf("%s", path_buf);
+    // printf("%s", name_buf);
+    // if (strlen(path_buf) > 1)
+    // {
+    //     father_inode_id = find_inode(path_buf);
+    // }
+    // else
+    // {
+    //     father_inode_id = 1;
+    // }
+    // if (inode_table[father_inode_id].size > 0)
+    // {
+    //     memset(block_buffer, 0, sizeof(block_buffer));
+    //     write_block(inode_table[father_inode_id].block_point[inode_table[father_inode_id].size - 1], (char *)block_buffer);
+    //     for (int j = 0; j < 8; j++)
+    //     {
+    //         if (block_buffer[j].valid == 0)
+    //         {
+    //             block_buffer[j].valid = 1;
+    //             block_buffer[j].inode_id = inode_id;
+    //             block_buffer[j].type = 1;
+    //             strcpy(block_buffer[j].name, name_buf);
+    //             write_block(inode_table[father_inode_id].block_point[inode_table[father_inode_id].size - 1], (char *)block_buffer);
+    //             flag = 1;
+    //             break;
+    //         }
+    //     }
+    // }
+    // if (flag == 0)
+    // {
+    //     inode_table[father_inode_id].size++;
+    //     inode_table[father_inode_id].block_point[inode_table[father_inode_id].size - 1] = find_free_block();
+    //     write_inode();
+    //     memset(block_buffer, 0, sizeof(block_buffer));
+    //     block_buffer[0].valid = 1;
+    //     block_buffer[0].inode_id = inode_id;
+    //     block_buffer[0].type = 1;
+    //     strcpy(block_buffer[0].name, name_buf);
+    //     write_block(inode_table[father_inode_id].block_point[inode_table[father_inode_id].size - 1], (char *)block_buffer);
+    // }
+    // return inode_id;
 }
 
 // 复制文件
