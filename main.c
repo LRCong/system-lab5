@@ -403,7 +403,18 @@ int create_dir(char *path)
 // 复制文件
 void copy_file(char *from, char *to)
 {
+    inode inode_table[1024];
+    read_inode(inode_table);
     int inode_id = create_file(to);
+    int from_id = find_inode(from);
+    char buf[1024];
+    for (int i = 0; i < inode_table[from_id].size; i++)
+    {
+        read_block(inode_table[from_id].block_point[i], buf);
+        inode_table[inode_id].size++;
+        int block_id = inode_table[inode_id].block_point[i] = find_free_block();
+        write_block(block_id, buf);
+    }
 }
 
 // 关闭系统
